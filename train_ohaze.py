@@ -12,7 +12,7 @@ from torch.utils.data import DataLoader
 import torch.cuda.amp as amp
 
 from model import DM2FNet_woPhy
-from tools.config import OHAZE_ROOT
+from tools.config import OHAZE_ROOT,CKPT_ROOT
 from datasets import OHazeDataset
 from tools.utils import AvgMeter, check_mkdir, sliding_forward
 
@@ -23,7 +23,7 @@ def parse_args():
     parser = argparse.ArgumentParser(description='Train a DM2FNet')
     parser.add_argument(
         '--gpus', type=str, default='0', help='gpus to use ')
-    parser.add_argument('--ckpt-path', default='./ckpt', help='checkpoint path')
+    parser.add_argument('--ckpt-path', default=CKPT_ROOT, help='checkpoint path')
     parser.add_argument(
         '--exp-name',
         default='O-Haze',
@@ -35,15 +35,15 @@ def parse_args():
 
 cfgs = {
     'use_physical': True,
-    'iter_num': 20000,
-    'train_batch_size': 16,
+    'iter_num': 2000,
+    'train_batch_size': 4,
     'last_iter': 0,
     'lr': 2e-4,
     'lr_decay': 0.9,
     'weight_decay': 2e-5,
     'momentum': 0.9,
     'snapshot': '',
-    'val_freq': 2000,
+    'val_freq': 500,
     'crop_size': 512,
 }
 
@@ -167,7 +167,8 @@ def validate(net, curr_iter, optimizer):
                 r = dehaze[i].cpu().numpy().transpose([1, 2, 0])  # data range [0, 1]
                 g = gt[i].cpu().numpy().transpose([1, 2, 0])
                 psnr = peak_signal_noise_ratio(g, r)
-                ssim = structural_similarity(g, r, data_range=1, multichannel=True,
+                # print(g.shape)
+                ssim = structural_similarity(g, r, data_range=1, multichannel=True,channel_axis = 2,
                                              gaussian_weights=True, sigma=1.5, use_sample_covariance=False)
                 psnr_record.update(psnr)
                 ssim_record.update(ssim)
@@ -200,6 +201,6 @@ if __name__ == '__main__':
     val_loader = DataLoader(val_dataset, batch_size=1)
 
     criterion = nn.L1Loss().cuda()
-    log_path = os.path.join(args.ckpt_path, args.exp_name, str(datetime.datetime.now()) + '.txt')
+    log_path = os.path.join(args.ckpt_path, args.exp_name, 'train.txt')
 
     main()
